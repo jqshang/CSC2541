@@ -99,7 +99,7 @@ def train_granger_net(
     S_res = coords_to_residue_scores(S, n_coords=C)
     G_res, tau = build_residue_adjacency(S_res, percentile=95)
 
-    return G_res, tau
+    return G_res, tau, S_res
 
 
 def main():
@@ -108,13 +108,13 @@ def main():
     positions, angles, amino_acids = generate_synthetic_protein_data(
         num_acids, num_steps)
 
-    G_res_position, tau_position = train_granger_net(positions)
+    G_res_position, tau_position, S_res_position = train_granger_net(positions)
     DG_res_position = adjacency_to_digraph(G_res_position,
                                            node_names=amino_acids)
     plot_title = f"Residue-level Granger Graph (tau = {tau_position:.3f})"
     plot_digraph(DG_res_position, node_names=amino_acids, title=plot_title)
 
-    G_res_angle, tau_angle = train_granger_net(angles)
+    G_res_angle, tau_angle, S_res_angle = train_granger_net(angles)
     DG_res_angle = adjacency_to_digraph(G_res_angle, node_names=amino_acids)
     plot_title = f"Residue-level Granger Graph (tau = {tau_angle:.3f})"
     plot_digraph(DG_res_angle, node_names=amino_acids, title=plot_title)
