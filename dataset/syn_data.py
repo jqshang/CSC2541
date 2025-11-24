@@ -31,4 +31,7 @@ def generate_synthetic_protein_data(num_acids, num_steps, pairs, seed=42):
                       j, :] += positions[t, j, :] * np.sin(positions[t, i, :])
             angles[t + 1, j, :] -= angles[t, i, :]
 
+    angles = np.clip(angles, -1e6, 1e6)
+    positions = np.clip(positions, -1e6, 1e6)
+
     return positions, angles, amino_acids
