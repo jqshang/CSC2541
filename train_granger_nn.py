@@ -67,7 +67,16 @@ def _train_granger_net(X,
     return model, S
 
 
-def train_granger_net(data):
+def train_granger_net(
+    data,
+    H=5,
+    hidden_dim=64,
+    num_layers=2,
+    lr=1e-3,
+    n_epochs=500,
+    lambda_v=1e-3,
+    lambda_t=1e-3,
+):
     T, D, C = data.shape
 
     X = flatten_coordinates(data)
@@ -78,12 +87,12 @@ def train_granger_net(data):
     model, S = _train_granger_net(
         X,
         H=H,
-        hidden_dim=64,
-        num_layers=2,
-        lr=1e-3,
-        n_epochs=300,
-        lambda_v=1e-3,
-        lambda_t=1e-3,
+        hidden_dim=hidden_dim,
+        num_layers=num_layers,
+        lr=lr,
+        n_epochs=n_epochs,
+        lambda_v=lambda_v,
+        lambda_t=lambda_t,
         device=device,
     )
 

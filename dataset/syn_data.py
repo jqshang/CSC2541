@@ -2,7 +2,7 @@ import numpy as np
 
 
 def generate_synthetic_protein_data(num_acids, num_steps, pairs, seed=42):
-    rng = np.random.default_rng(seed)
+    np.random.seed(seed)
 
     # amino acid labels
     amino_acids = [f"A{i}" for i in range(1, num_acids + 1)]
@@ -13,8 +13,8 @@ def generate_synthetic_protein_data(num_acids, num_steps, pairs, seed=42):
 
     # ---- Step 1: random initialization for all acids and times ----
     # positions: (T, N, 3), angles: (T, N, 2)
-    positions = rng.uniform(-1.0, 1.0, size=(num_steps, num_acids, 3))
-    angles = rng.uniform(-180.0, 180.0, size=(num_steps, num_acids, 2))
+    positions = np.random.uniform(-1.0, 1.0, size=(num_steps, num_acids, 3))
+    angles = np.random.uniform(-180.0, 180.0, size=(num_steps, num_acids, 2))
 
     # ---- Step 2: apply dependency rules over time ----
     for t in range(num_steps - 1):
