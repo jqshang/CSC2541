@@ -1,7 +1,11 @@
 import numpy as np
 
 
-def syn_data(num_acids, num_steps, pairs, version="v1", seed=42):
+def generate_synthetic_protein_data(num_acids,
+                                    num_steps,
+                                    pairs,
+                                    version="v1",
+                                    seed=42):
     np.random.seed(seed)
 
     amino_acids = [f"A{i}" for i in range(1, num_acids + 1)]
@@ -46,6 +50,7 @@ def syn_data(num_acids, num_steps, pairs, version="v1", seed=42):
                 # update
                 pos[t + 1, j] += np.sin(Ai_pos)
                 ang[t + 1, j] -= Ai_ang
+                ang[t + 1, j] = ((ang[t + 1, j, :] + 180) % 360) - 180
 
             else:
                 raise ValueError("version must be 'v1', 'v2', or 'v3'")
