@@ -1,10 +1,7 @@
 import numpy as np
 
 
-def generate_synthetic_protein_data_v3_fixed(num_acids,
-                                             num_steps,
-                                             pairs,
-                                             seed=42):
+def generate_synthetic_protein_data(num_acids, num_steps, pairs, seed=42):
     np.random.seed(seed)
     amino_acids = [f"A{i}" for i in range(1, num_acids + 1)]
     idx = {a: i for i, a in enumerate(amino_acids)}
