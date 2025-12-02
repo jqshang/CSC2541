@@ -1,4 +1,5 @@
 import networkx as nx
+from tqdm.auto import tqdm
 
 
 def dfs(DG, source, target):
@@ -17,7 +18,13 @@ def dfs(DG, source, target):
                 stack.append((nbr, new_path))
 
 
-def filter_paths(DG, amino_acids, allosteric_sites, active_sites):
+def filter_paths(
+    DG,
+    amino_acids,
+    allosteric_sites,
+    active_sites,
+    dfs,
+):
     name_to_idx = {name: i for i, name in enumerate(amino_acids)}
 
     allosteric_indices = {name: name_to_idx[name] for name in allosteric_sites}
@@ -27,8 +34,16 @@ def filter_paths(DG, amino_acids, allosteric_sites, active_sites):
     used_nodes = set()
     used_edges = set()
 
-    for allo_name, allo_idx in allosteric_indices.items():
-        for active_name, target_idx in active_indices.items():
+    allo_items = list(allosteric_indices.items())
+    active_items = list(active_indices.items())
+    total_pairs = len(allo_items) * len(active_items)
+
+    pbar_pairs = tqdm(total=total_pairs, desc="Allosteric-Active pairs")
+
+    for allo_name, allo_idx in allo_items:
+        for active_name, target_idx in active_items:
+            pbar_pairs.update(1)
+
             paths_idx = list(dfs(DG, allo_idx, target_idx))
 
             paths_names = []
@@ -41,12 +56,9 @@ def filter_paths(DG, amino_acids, allosteric_sites, active_sites):
 
             paths_by_pair[(allo_name, active_name)] = paths_names
 
-    signaling_subgraph = DG.subgraph(used_nodes).copy()
+    pbar_pairs.close()
 
-    for u, v in list(signaling_subgraph.edges()):
-        if (u, v) not in used_edges:
-            signaling_subgraph.remove_edge(u, v)
-
+    signaling_subgraph = DG.edge_subgraph(used_edges).copy()
     return paths_by_pair, signaling_subgraph
 
 
