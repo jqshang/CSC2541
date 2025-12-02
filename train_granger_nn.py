@@ -6,16 +6,19 @@ from model.granger_nn import GrangerNeuralNet
 from model.util import coords_to_residue_scores, build_residue_adjacency, adjacency_to_digraph, plot_digraph
 
 
-def _train_granger_net(X,
-                       H=5,
-                       hidden_dim=64,
-                       num_layers=2,
-                       lr=1e-3,
-                       n_epochs=500,
-                       lambda_v=1e-4,
-                       lambda_t=1e-4,
-                       device="cpu"):
-    X_torch = torch.from_numpy(X).float().to(device)  # (T, D)
+def _train_granger_net(
+    X,
+    H=5,
+    hidden_dim=64,
+    num_layers=2,
+    lr=1e-3,
+    n_epochs=500,
+    lambda_v=1e-4,
+    lambda_t=1e-4,
+    device="cpu",
+    batch_size=256,
+):
+    X_torch = torch.from_numpy(X).float()  # .to(device)  # (T, D)
     X_torch = X_torch.unsqueeze(0)  # (1, T, D)
 
     with torch.no_grad():
@@ -25,35 +28,57 @@ def _train_granger_net(X,
 
     B, T, D = X_torch.shape
     X_lag, Y = create_lagged_data(X_torch, H)  # (N, H, D), (N, D)
+    N = X_lag.shape[0]
 
-    model = GrangerNeuralNet(D=D,
-                             H=H,
-                             hidden_dim=hidden_dim,
-                             num_layers=num_layers,
-                             device=device)
+    model = GrangerNeuralNet(
+        D=D,
+        H=H,
+        hidden_dim=hidden_dim,
+        num_layers=num_layers,
+        device=device,
+    )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     mse_loss = nn.MSELoss()
 
     for epoch in range(n_epochs):
         model.train()
-        optimizer.zero_grad()
 
-        Y_hat = model(X_lag)  # (N, D)
-        loss_mse = mse_loss(Y_hat, Y.to(device))
+        # random permutation of indices
+        perm = torch.randperm(N)
 
-        loss_sparse_v = model.v.abs().sum()
-        loss_sparse_t = model.t.abs().sum()
-        loss = loss_mse + lambda_v * loss_sparse_v + lambda_t * loss_sparse_t
+        epoch_loss = 0.0
+        num_batches = 0
 
-        loss.backward()
-        optimizer.step()
+        for i in range(0, N, batch_size):
+            idx = perm[i:i + batch_size]
+
+            # Move only this batch to GPU
+            X_batch = X_lag[idx].to(device)
+            Y_batch = Y[idx].to(device)
+
+            optimizer.zero_grad(set_to_none=True)
+
+            Y_hat = model(X_batch)  # (batch, D)
+            loss_mse = mse_loss(Y_hat, Y_batch)
+
+            # L1 penalties
+            loss_sparse_v = model.v.abs().sum()
+            loss_sparse_t = model.t.abs().sum()
+            loss = loss_mse + lambda_v * loss_sparse_v + lambda_t * loss_sparse_t
+
+            loss.backward()
+            optimizer.step()
+
+            epoch_loss += loss_mse.item()
+            num_batches += 1
 
         if (epoch + 1) % 50 == 0:
+            avg_mse = epoch_loss / max(1, num_batches)
             print(f"Epoch {epoch + 1}/{n_epochs} | "
-                  f"MSE: {loss_mse.item():.4f} | "
-                  f"L1_v: {(lambda_v * loss_sparse_v).item():.4f} | "
-                  f"L1_t: {(lambda_t * loss_sparse_t).item():.4f}")
+                  f"mean MSE: {avg_mse:.4f} | "
+                  f"L1_v: {(lambda_v * model.v.abs().sum()).item():.4f} | "
+                  f"L1_t: {(lambda_t * model.t.abs().sum()).item():.4f}")
 
     S = model.granger_matrix(p=2)
     return model, S
