@@ -1,1 +1,16 @@
-# CSC2541
+# Determine Protein Information Flow Via Granger  Causality Analysis
+
+## Abstract
+
+> Distinguishing true causal drivers from correlated downstream effects in multivariate time series is a central challenge in causal discovery, particularly when the underlying system contains feedback loops that violate standard Directed Acyclic Graph (DAG) assumptions. We investigate the problem of identifying directional signal  pathways in the protein Adenylate Kinase(Adk) using Molecular Dynamics trajectories. Unlike traditional biochemical analysis methods that rely on undirected correlation metrics (e.g., Mutual Information), we formulate this as a causal inference problem to distinguish driver residues from downstream effectors. By applying Granger causality testing to residue-level time series (dihedral angles and coordinates), we construct a directed graph of information flow. Crucially, our approach account for the inherent cyclic nature of protein dynamics. Instead of enforcing a strict Directed Acyclic Graph (DAG) assumption, which would artificially sever physically valid feedback loops, we infer a general directed graph. We then employ Strongly Connected Component (SCC) analysis to identify cyclic functional units, allowing us to extract dominant causal paths mediating the allosteric communication between the LID and NMP domains. This method demonstrates the potential of causal methods to uncover directed mechanisms in complex, cyclic biological systems.
+
+## Methodology Overview
+
+Our goal is to estimate directed information flow between protein residues from molecular dynamics trajectories. Our proposed method consists of three stages shown in Figure \ref{fig:algorithm_flowchart}. First, we train two Granger Neural Nets, one on positional data and one on angular data. These models produce residue influence scores. We then normalize these scores and combine them into a unified measure, which we use to construct a directed graph. Second, for known allosteric and active sites, we extract directed signaling pathways from allosteric sites to the active site using depth-first search (DFS). In this step, we remove edges that are not visited. Finally, we perform a strongly connected component (SCC) analysis on this signaling subgraph. We collapse each SCC into a single super-node, obtaining a quotient graph that is a directed acyclic graph (DAG).
+
+![Methodology Overview](assets/method.png)
+
+## Demo
+We utilize the [Adenylate Kinase (AdK) molecular dynamics transition dataset](https://www.mdanalysis.org/MDAnalysisData/adk_equilibrium.html) from MDAnalysisData. This dataset provides residual-level trajectories capturing the continuous conformational pathway between the open and closed states. By extracting time-series features (specifically dihedral angles and $\alpha$-carbon coordinates) from these trajectories, we generate the multivariate time series required for Granger causality analysis.
+
+For a full end-to-end example, see the [`grangernn_causal_discovery.ipynb`](Experiments/grangernn_causal_discovery.ipynb) notebook.
