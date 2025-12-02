@@ -4,33 +4,16 @@ import matplotlib.pyplot as plt
 
 
 def coords_to_residue_scores(S, n_coords=3):
-    """
-    S: (D, D) GC strengths between *coordinates*.
-       D = num_acids * n_coords
-
-    Returns:
-      S_res: (R, R) residue-level strengths, R = D // n_coords
-             S_res[i, j] ~ influence of residue j -> residue i
-    """
     D = S.shape[0]
     assert D % n_coords == 0, "D must be divisible by n_coords"
     R = D // n_coords
 
-    # reshape to (target_res, coord_d, source_res, coord_j)
     S_reshaped = S.reshape(R, n_coords, R, n_coords)
-    S_res = S_reshaped.mean(axis=(1, 3))  # average over coordinate dims
+    S_res = S_reshaped.mean(axis=(1, 3))
     return S_res
 
 
 def build_residue_adjacency(S_res, percentile=95):
-    """
-    S_res: (R, R) residue-level scores
-    percentile: global percentile threshold (e.g., 95 keeps top 5% edges)
-
-    Returns:
-      G_res: (R, R) binary adjacency, G_res[i, j] = 1 if j -> i
-      tau:   threshold used
-    """
     tau = np.percentile(S_res, percentile)
     G_res = (S_res > tau).astype(int)
     np.fill_diagonal(G_res, 0)
@@ -38,18 +21,10 @@ def build_residue_adjacency(S_res, percentile=95):
 
 
 def adjacency_to_digraph(G, node_names=None):
-    """
-    G: (N, N) numpy array, G[i, j] = 1 if j -> i (edge j -> i)
-    node_names: optional list of labels (len N)
-
-    Returns:
-      DG: networkx.DiGraph
-    """
     G = np.asarray(G)
     N = G.shape[0]
     DG = nx.DiGraph()
 
-    # add nodes
     if node_names is None:
         DG.add_nodes_from(range(N))
     else:
@@ -57,7 +32,6 @@ def adjacency_to_digraph(G, node_names=None):
         for idx, name in enumerate(node_names):
             DG.add_node(idx, label=name)
 
-    # add edges (j -> i)
     for i in range(N):
         for j in range(N):
             if i == j:
@@ -86,3 +60,38 @@ def plot_digraph(DG, node_names=None, title=None, figsize=(8, 8)):
         plt.title(title)
     plt.tight_layout()
     plt.show()
+
+
+def normalize_scores(S):
+    S = S.copy()
+    max_val = S.max()
+    if max_val <= 0:
+        return S
+    return S / max_val
+
+
+def combine_position_angle_scores(
+    S_pos,
+    S_ang,
+    alpha=0.5,
+    beta=0.5,
+    percentile=95,
+):
+    S_pos_norm = normalize_scores(S_pos)
+    S_ang_norm = normalize_scores(S_ang)
+
+    S_res_comb = alpha * S_pos_norm + beta * S_ang_norm
+
+    tau_comb = np.percentile(S_res_comb, percentile)
+    G_res_comb = (S_res_comb > tau_comb).astype(int)
+    np.fill_diagonal(G_res_comb, 0)
+
+    return G_res_comb, tau_comb, S_res_comb
+
+
+def print_sccs(sccs, amino_acids):
+    print("Strongly connected components (SCCs):")
+    for cid, comp in enumerate(sccs):
+        members_idx = sorted(list(comp))
+        members_names = [amino_acids[i] for i in members_idx]
+        print(f"  SCC {cid}: " + ", ".join(members_names))

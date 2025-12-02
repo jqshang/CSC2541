@@ -15,16 +15,9 @@ def _train_granger_net(X,
                        lambda_v=1e-4,
                        lambda_t=1e-4,
                        device="cpu"):
-    """
-    X: numpy array of shape (T, D) = (time, features)
-    Returns:
-      model: trained GrangerNeuralNet
-      S:     GC strength matrix (D, D)
-    """
     X_torch = torch.from_numpy(X).float().to(device)  # (T, D)
     X_torch = X_torch.unsqueeze(0)  # (1, T, D)
 
-    # standardize features over time
     with torch.no_grad():
         mean = X_torch.mean(dim=1, keepdim=True)
         std = X_torch.std(dim=1, keepdim=True) + 1e-6
@@ -49,7 +42,6 @@ def _train_granger_net(X,
         Y_hat = model(X_lag)  # (N, D)
         loss_mse = mse_loss(Y_hat, Y.to(device))
 
-        # sparsity penalties
         loss_sparse_v = model.v.abs().sum()
         loss_sparse_t = model.t.abs().sum()
         loss = loss_mse + lambda_v * loss_sparse_v + lambda_t * loss_sparse_t
@@ -83,7 +75,6 @@ def train_granger_net(
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    H = 5  # number of lags
     model, S = _train_granger_net(
         X,
         H=H,
@@ -105,8 +96,10 @@ def train_granger_net(
 def main():
     num_acids = 50
     num_steps = 200
+    pairs = [("A1", "A16"), ("A16", "A17"), ("A17", "A30"), ("A30", "A36"),
+             ("A30", "A16"), ("A36", "A50")]
     positions, angles, amino_acids = generate_synthetic_protein_data(
-        num_acids, num_steps)
+        num_acids, num_steps, pairs)
 
     G_res_position, tau_position, S_res_position = train_granger_net(positions)
     DG_res_position = adjacency_to_digraph(G_res_position,
