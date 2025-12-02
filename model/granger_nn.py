@@ -25,12 +25,6 @@ class MLP(nn.Module):
 
 
 class GrangerNeuralNet(nn.Module):
-    """
-    Decoupled Granger Neural Net:
-      - v[d, j]  : importance of source series j for target d
-      - t[d, h, j]: importance of lag h of source j for target d
-      - one MLP per target dimension d
-    """
 
     def __init__(self, D, H, hidden_dim=128, num_layers=4, device="cpu"):
         super().__init__()
@@ -53,11 +47,7 @@ class GrangerNeuralNet(nn.Module):
         self.to(device)
 
     def forward(self, X_lag):
-        """
-        X_lag: (N, H, D)
-        Returns:
-          Y_hat: (N, D)
-        """
+
         N, H, D = X_lag.shape
         assert H == self.H and D == self.D
 
@@ -79,12 +69,6 @@ class GrangerNeuralNet(nn.Module):
         return Y_hat
 
     def granger_matrix(self, p=2):
-        """
-        Extract GC strengths using group norm over lags:
-          S[d, j] = |v[d, j]| * ||t[d, :, j]||_p
-        Returns:
-          S: (D, D) numpy array
-        """
         with torch.no_grad():
             v = self.v
             t = self.t
